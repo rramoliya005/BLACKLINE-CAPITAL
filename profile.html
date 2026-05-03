@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Profile — Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#ffffff;--bg2:#f8f9fa;--bg3:#f1f3f5;
+  --border:#e5e7eb;--border2:#d1d5db;
+  --txt:#111827;--txt2:#374151;--txt3:#6b7280;
+  --green:#10b981;--green-light:#d1fae5;
+  --red:#ef4444;--red-light:#fee2e2;
+  --yellow:#f59e0b;--yellow-light:#fef3c7;
+  --blue:#3b82f6;--blue-light:#dbeafe;
+  --accent:#111827;
+}
+body{font-family:'Rajdhani',sans-serif;background:#f3f4f6;color:var(--txt);min-height:100vh;}
+h1,h2,h3,.num{font-family:'Bebas Neue',sans-serif;letter-spacing:0.02em;}
+code,.mono{font-family:'JetBrains Mono',monospace;}
+
+.header{background:#111827;color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #10b981;}
+.header-brand{display:flex;align-items:center;gap:14px;}
+.header-logo{font-family:'Bebas Neue';font-size:28px;letter-spacing:2px;color:#fff;}
+.header-logo span{color:#10b981;}
+.header-sub{font-family:'JetBrains Mono';font-size:11px;color:#9ca3af;margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.header-badge{background:#10b981;color:#fff;font-family:'Bebas Neue';font-size:13px;padding:4px 10px;border-radius:4px;letter-spacing:1px;}
+.header-date{font-family:'JetBrains Mono';font-size:11px;color:#9ca3af;}
+
+.status-bar{background:#1f2937;color:#9ca3af;font-family:'JetBrains Mono';font-size:11px;padding:8px 28px;display:flex;gap:28px;align-items:center;}
+.status-bar .s-item b{color:#10b981;}
+.status-bar .s-item.neg b{color:#ef4444;}
+
+.tabs{border-bottom:2px solid var(--border);padding:0 28px;background:#fff;display:flex;gap:0;}
+.tab-btn{font-family:'Bebas Neue';font-size:15px;letter-spacing:1px;padding:14px 22px;border:none;background:none;cursor:pointer;color:var(--txt3);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;}
+.tab-btn.active{color:#111827;border-bottom-color:#10b981;}
+.tab-btn:hover:not(.active){color:var(--txt2);}
+
+.tab-content{display:none;padding:24px 28px;}
+.tab-content.active{display:block;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:24px;}
+.kpi-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.green::before{background:var(--green);}
+.kpi-card.red::before{background:var(--red);}
+.kpi-card.yellow::before{background:var(--yellow);}
+.kpi-card.blue::before{background:var(--blue);}
+.kpi-card.dark::before{background:#111827;}
+.kpi-val{font-family:'Bebas Neue';font-size:38px;line-height:1;color:var(--txt);}
+.kpi-val.hero{font-size:64px;color:#10b981;}
+.kpi-val.red-val{color:var(--red);}
+.kpi-label{font-family:'JetBrains Mono';font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:0.08em;margin-top:5px;}
+.kpi-sub{font-family:'JetBrains Mono';font-size:10px;color:var(--txt3);margin-top:3px;}
+
+.section{margin-bottom:28px;}
+.section-title{font-family:'Bebas Neue';font-size:20px;letter-spacing:1px;color:var(--txt);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px;}
+.chart-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;}
+.chart-box.full{grid-column:1/-1;}
+.chart-box h4{font-family:'Bebas Neue';font-size:16px;letter-spacing:0.5px;color:var(--txt);margin-bottom:12px;}
+.chart-wrap{position:relative;}
+.chart-wrap canvas{max-height:220px;}
+.chart-wrap.tall canvas{max-height:280px;}
+
+.pair-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono';font-size:12px;}
+.pair-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);color:var(--txt3);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;}
+.pair-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.pair-table tr:hover td{background:var(--bg2);}
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:700;}
+.rank-1{background:#fbbf24;color:#78350f;}
+.rank-2{background:#d1d5db;color:#374151;}
+.rank-3{background:#cd7c3a;color:#fff;}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-family:'JetBrains Mono';}
+.pill-green{background:var(--green-light);color:#065f46;}
+.pill-red{background:var(--red-light);color:#991b1b;}
+.pill-yellow{background:var(--yellow-light);color:#92400e;}
+.dir-badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-family:'JetBrains Mono';font-weight:700;letter-spacing:0.05em;}
+.dir-call{background:#dbeafe;color:#1d4ed8;}
+.dir-put{background:#ede9fe;color:#6d28d9;}
+
+.trade-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono';font-size:11px;}
+.trade-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);color:var(--txt3);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;}
+.trade-table td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle;}
+.trade-table tr:hover td{background:var(--bg2);}
+.profit-pos{color:#10b981;font-weight:700;}
+.profit-neg{color:#ef4444;font-weight:700;}
+.profit-zero{color:var(--txt3);}
+
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+.insight-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;}
+.insight-card .ic-title{font-family:'Bebas Neue';font-size:16px;letter-spacing:0.5px;color:var(--txt);margin-bottom:8px;}
+.insight-card .ic-body{font-family:'Rajdhani';font-size:14px;line-height:1.6;color:var(--txt2);}
+.rec-list{list-style:none;padding:0;}
+.rec-list li{padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:flex-start;gap:8px;}
+.rec-list li:last-child{border-bottom:none;}
+.rec-list li::before{content:'→';color:#10b981;font-weight:700;flex-shrink:0;}
+
+.donut-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-family:'JetBrains Mono';font-size:11px;color:var(--txt3);}
+.donut-legend span{display:flex;align-items:center;gap:5px;}
+.dot{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+@media(max-width:768px){
+  .chart-grid{grid-template-columns:1fr;}
+  .chart-box.full{grid-column:1;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .header{padding:14px 16px;}
+  .tab-content{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div>
+      <div class="header-logo">TRADING <span>PROFILE</span></div>
+      <div class="header-sub">PERFORMANCE DASHBOARD · OTC FOREX OPTIONS</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-date mono" style="font-size:11px;color:#9ca3af;">APR 29 – MAY 3, 2026</div>
+    <div class="header-badge">40 TRADES</div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="s-item">STARTING BALANCE: <b>$520.00</b></div>
+  <div class="s-item">CURRENT BALANCE: <b>$638.46</b></div>
+  <div class="s-item">NET P&L: <b>+$118.46</b></div>
+  <div class="s-item">RETURN: <b>+22.78%</b></div>
+  <div class="s-item neg">WIN RATE: <b>45.0%</b></div>
+  <div class="s-item">TOTAL INVESTED: <b>$1,170.39</b></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
+  <button class="tab-btn" onclick="switchTab('pairs',this)">Pairs</button>
+  <button class="tab-btn" onclick="switchTab('trades',this)">All Trades</button>
+  <button class="tab-btn" onclick="switchTab('insights',this)">Insights</button>
+  <button class="tab-btn" onclick="switchTab('projection',this)">🚀 $1M Projection</button>
+</div>
+
+<!-- OVERVIEW TAB -->
+<div class="tab-content active" id="tab-overview">
+
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-val hero">$638</div>
+      <div class="kpi-label">Current Balance</div>
+      <div class="kpi-sub mono">+$118.46 from $520</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-val">+22.78%</div>
+      <div class="kpi-label">Total Return</div>
+      <div class="kpi-sub mono">5-day period</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-val">40</div>
+      <div class="kpi-label">Total Trades</div>
+      <div class="kpi-sub mono">18W / 20L / 2Tie</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-val red-val">45.0%</div>
+      <div class="kpi-label">Win Rate</div>
+      <div class="kpi-sub mono">18 wins of 40</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-val">$1,170</div>
+      <div class="kpi-label">Volume Traded</div>
+      <div class="kpi-sub mono">avg $29.26/trade</div>
+    </div>
+    <div class="kpi-card dark">
+      <div class="kpi-val">19</div>
+      <div class="kpi-label">Pairs Traded</div>
+      <div class="kpi-sub mono">USD/JPY top performer</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box full">
+      <h4>Balance Curve — Starting $520</h4>
+      <div class="chart-wrap tall">
+        <canvas id="balanceChart" role="img" aria-label="Line chart showing trading account balance over time starting at $520 and ending at $638.46">Balance started at $520 and ended at $638.46 over 40 trades.</canvas>
+      </div>
+    </div>
+
+    <div class="chart-box">
+      <h4>Daily P&L</h4>
+      <div class="chart-wrap">
+        <canvas id="dailyChart" role="img" aria-label="Bar chart of daily profit and loss over 5 trading days">Daily P&L ranged from $15.78 to $35.22.</canvas>
+      </div>
+    </div>
+
+    <div class="chart-box">
+      <h4>Win / Loss Distribution</h4>
+      <div class="chart-wrap">
+        <canvas id="winlossChart" role="img" aria-label="Donut chart showing win loss tie distribution: 18 wins, 20 losses, 2 ties">18 wins, 20 losses, 2 ties out of 40 trades.</canvas>
+      </div>
+      <div class="donut-legend">
+        <span><span class="dot" style="background:#10b981;"></span>Wins (18) 45%</span>
+        <span><span class="dot" style="background:#ef4444;"></span>Losses (20) 50%</span>
+        <span><span class="dot" style="background:#9ca3af;"></span>Ties (2) 5%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Direction Breakdown</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+      <div class="chart-box">
+        <h4>Call vs Put Split</h4>
+        <div class="chart-wrap">
+          <canvas id="dirChart" role="img" aria-label="Donut chart of call vs put trades">Calls vs puts split.</canvas>
+        </div>
+        <div class="donut-legend">
+          <span><span class="dot" style="background:#3b82f6;"></span>Calls (22) 55%</span>
+          <span><span class="dot" style="background:#8b5cf6;"></span>Puts (18) 45%</span>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h4>P&L by Direction</h4>
+        <div class="chart-wrap">
+          <canvas id="dirPnlChart" role="img" aria-label="Bar chart showing profit by call vs put direction">P&L broken down by trade direction.</canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAIRS TAB -->
+<div class="tab-content" id="tab-pairs">
+  <div class="section">
+    <div class="section-title">Performance by Currency Pair</div>
+    <table class="pair-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Pair</th>
+          <th>Trades</th>
+          <th>Net P&L</th>
+          <th>Avg P&L</th>
+          <th>Volume</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="pairTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">P&L by Pair</div>
+    <div class="chart-box full">
+      <div class="chart-wrap tall">
+        <canvas id="pairChart" role="img" aria-label="Horizontal bar chart of profit and loss by currency pair">P&L by each currency pair traded.</canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADES TAB -->
+<div class="tab-content" id="tab-trades">
+  <div class="section">
+    <div class="section-title">Trade Log</div>
+    <table class="trade-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date/Time</th>
+          <th>Pair</th>
+          <th>Dir</th>
+          <th>Expiry</th>
+          <th>Open</th>
+          <th>Close</th>
+          <th>Amount</th>
+          <th>Profit</th>
+          <th>Balance</th>
+        </tr>
+      </thead>
+      <tbody id="tradeTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- INSIGHTS TAB -->
+<div class="tab-content" id="tab-insights">
+  <div class="section">
+    <div class="section-title">Key Insights</div>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <div class="ic-title">💰 Account Growth</div>
+        <div class="ic-body">
+          Started with <span style="font-family:'JetBrains Mono';font-weight:700;">$520.00</span> and grew to 
+          <span style="font-family:'JetBrains Mono';font-weight:700;color:#10b981;">$638.46</span> in just 5 days — a 
+          <span style="font-family:'JetBrains Mono';font-weight:700;color:#10b981;">+22.78%</span> return. This is impressive compounding for the period.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">⚠️ Win Rate Warning</div>
+        <div class="ic-body">
+          Win rate of <span style="font-family:'JetBrains Mono';font-weight:700;color:#ef4444;">45%</span> is below the break-even threshold for binary options (~52%). Profitability is driven by <strong>larger wins</strong> vs smaller losses — a positive sign, but risky long-term.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">🏆 Best Trade</div>
+        <div class="ic-body">
+          <span style="font-family:'JetBrains Mono';font-weight:700;color:#10b981;">USD/DZD CALL +$271.76</span><br>
+          May 3, 16:14 — $316 invested. This single trade rescued a $-260 drawdown streak on the same pair and accounted for 229% of total profits.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">💥 Biggest Risk</div>
+        <div class="ic-body">
+          On May 3, the USD/DZD sequence hit 
+          <span style="font-family:'JetBrains Mono';font-weight:700;color:#ef4444;">-$354</span> drawdown before a recovery. Balance dropped from $614 to a low of <span style="font-family:'JetBrains Mono';font-weight:700;color:#ef4444;">$354.66</span> — only 54% of start capital.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">📈 Best Day</div>
+        <div class="ic-body">
+          <span style="font-family:'JetBrains Mono';font-weight:700;">May 1, 2026 → +$35.22</span><br>
+          Anchored by the USD/JPY put trade that returned +$28.40 on a $32.27 investment — a ~88% return on that single trade.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">🎯 Recommendations</div>
+        <div class="ic-body">
+          <ul class="rec-list">
+            <li>Avoid doubling down on losing pairs (ZAR/USD lost 4 times in a row)</li>
+            <li>USD/JPY and NGN/USD show strong single-trade ROI</li>
+            <li>Limit max single trade to 20% of balance</li>
+            <li>Focus on pairs with positive track record</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECTION TAB -->
+<div class="tab-content" id="tab-projection">
+  <style>
+    .proj-hero{background:linear-gradient(135deg,#111827 60%,#064e3b);border-radius:16px;padding:32px 28px;margin-bottom:24px;position:relative;overflow:hidden;}
+    .proj-hero::before{content:'$1,000,000';position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-family:'Bebas Neue';font-size:130px;color:rgba(16,185,129,0.07);letter-spacing:-2px;pointer-events:none;}
+    .proj-hero-title{font-family:'Bebas Neue';font-size:13px;letter-spacing:3px;color:#6b7280;margin-bottom:6px;}
+    .proj-hero-val{font-family:'Bebas Neue';font-size:72px;color:#10b981;line-height:1;margin-bottom:4px;}
+    .proj-hero-sub{font-family:'JetBrains Mono';font-size:12px;color:#9ca3af;}
+    .proj-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+    .proj-stat{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;border-top:3px solid #10b981;}
+    .proj-stat-val{font-family:'Bebas Neue';font-size:32px;color:#111827;line-height:1;}
+    .proj-stat-label{font-family:'JetBrains Mono';font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
+    .proj-chart-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;}
+    .proj-chart-box h4{font-family:'Bebas Neue';font-size:17px;letter-spacing:0.5px;color:#111827;margin-bottom:14px;}
+    .proj-milestones{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px;}
+    .milestone-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;align-items:center;gap:14px;transition:box-shadow 0.2s;}
+    .milestone-card:hover{box-shadow:0 4px 20px rgba(0,0,0,0.08);}
+    .milestone-icon{font-size:28px;flex-shrink:0;}
+    .milestone-body{}
+    .milestone-amt{font-family:'Bebas Neue';font-size:26px;color:#111827;}
+    .milestone-amt.reached{color:#10b981;}
+    .milestone-date{font-family:'JetBrains Mono';font-size:11px;color:#6b7280;margin-top:2px;}
+    .milestone-bar-wrap{background:#f3f4f6;border-radius:4px;height:4px;margin-top:8px;}
+    .milestone-bar{background:#10b981;height:4px;border-radius:4px;transition:width 1s ease;}
+    .formula-box{background:#111827;border-radius:12px;padding:20px;margin-bottom:20px;color:#fff;}
+    .formula-box h4{font-family:'Bebas Neue';font-size:16px;letter-spacing:1px;color:#10b981;margin-bottom:10px;}
+    .formula-code{font-family:'JetBrains Mono';font-size:13px;color:#d1fae5;background:rgba(255,255,255,0.05);padding:12px 16px;border-radius:8px;margin-bottom:10px;}
+    .formula-explain{font-family:'Rajdhani';font-size:14px;color:#9ca3af;line-height:1.6;}
+    .countdown-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+    .count-unit{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+    .count-num{font-family:'Bebas Neue';font-size:42px;color:#10b981;line-height:1;}
+    .count-label{font-family:'JetBrains Mono';font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;}
+    .pace-indicator{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+    .pace-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+    .pace-txt{font-family:'JetBrains Mono';font-size:12px;color:#374151;}
+    .pace-txt b{color:#111827;}
+  </style>
+
+  <!-- Hero: Current projected balance -->
+  <div class="proj-hero">
+    <div class="proj-hero-title">FORMULA PROJECTION — JAN 1, 2027 TARGET</div>
+    <div class="proj-hero-val" id="projCurrentVal">$—</div>
+    <div class="proj-hero-sub mono" id="projCurrentSub">calculating...</div>
+  </div>
+
+  <!-- Countdown to Jan 1, 2027 -->
+  <div class="section-title">TIME REMAINING TO $1M DAY</div>
+  <div class="countdown-strip">
+    <div class="count-unit"><div class="count-num" id="cdDays">—</div><div class="count-label">Days</div></div>
+    <div class="count-unit"><div class="count-num" id="cdHours">—</div><div class="count-label">Hours</div></div>
+    <div class="count-unit"><div class="count-num" id="cdMins">—</div><div class="count-label">Minutes</div></div>
+    <div class="count-unit"><div class="count-num" id="cdSecs">—</div><div class="count-label">Seconds</div></div>
+  </div>
+
+  <!-- Pace indicator -->
+  <div class="pace-indicator" id="paceIndicator"></div>
+
+  <!-- Key projection stats -->
+  <div class="proj-stats">
+    <div class="proj-stat">
+      <div class="proj-stat-val" id="statHoursLeft">—</div>
+      <div class="proj-stat-label">Hours Until Jan 1, 2027</div>
+    </div>
+    <div class="proj-stat">
+      <div class="proj-stat-val" id="statGrowthNeeded">—</div>
+      <div class="proj-stat-label">Growth Still Needed</div>
+    </div>
+    <div class="proj-stat">
+      <div class="proj-stat-val" id="statEndBalance">$1,000,000</div>
+      <div class="proj-stat-label">Target Balance (Jan 1, 2027)</div>
+    </div>
+    <div class="proj-stat">
+      <div class="proj-stat-val" id="statDailyRate">+3.12%</div>
+      <div class="proj-stat-label">Implied Daily Rate (0.13%/hr × 24)</div>
+    </div>
+  </div>
+
+  <!-- Milestone cards -->
+  <div class="section-title">MILESTONES</div>
+  <div class="proj-milestones" id="milestoneGrid"></div>
+
+  <!-- Projection chart -->
+  <div class="proj-chart-box">
+    <h4>Balance Projection Curve — Now → Jan 1, 2027</h4>
+    <div style="position:relative;height:320px;">
+      <canvas id="projectionChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Formula breakdown -->
+  <div class="formula-box">
+    <h4>⚡ YOUR FORMULA EXPLAINED</h4>
+    <div class="formula-code">Balance = 143 × (1.0013 ^ (6901 − hours_until_Jan_1_2027))</div>
+    <div class="formula-explain">
+      <b style="color:#d1fae5;">Starting anchor: $143</b> — the base principal the formula compounds from.<br>
+      <b style="color:#d1fae5;">Rate: 0.13% per hour</b> — that's ~3.12% per day, ~22% per week.<br>
+      <b style="color:#d1fae5;">6901 hours</b> — total hours from the formula origin to Jan 1, 2027.<br>
+      <b style="color:#d1fae5;">Hours elapsed</b> drive the exponent up, growing the balance exponentially toward $1M.
+    </div>
+  </div>
+</div>
+
+<script>
+const trades = [
+  {time:'2026-04-29 22:26',asset:'USD/ARS OTC',dir:'call',exp:'S59',open:1386.930,close:1387.190,amount:1.66,profit:1.25},
+  {time:'2026-04-29 22:32',asset:'BHD/CNY OTC',dir:'put',exp:'S59',open:18.234880,close:18.235680,amount:1.50,profit:-1.50},
+  {time:'2026-04-29 22:33',asset:'BHD/CNY OTC',dir:'put',exp:'S59',open:18.235680,close:18.235150,amount:3.58,profit:2.08},
+  {time:'2026-04-29 22:39',asset:'NZD/USD OTC',dir:'put',exp:'S59',open:0.591810,close:0.591270,amount:1.34,profit:0.66},
+  {time:'2026-04-29 22:45',asset:'YER/USD OTC',dir:'put',exp:'S59',open:0.004215,close:0.004215,amount:1.48,profit:0.00},
+  {time:'2026-04-29 22:46',asset:'YER/USD OTC',dir:'put',exp:'S31',open:0.004215,close:0.004213,amount:3.11,profit:2.83},
+  {time:'2026-04-29 22:51',asset:'USD/COP OTC',dir:'put',exp:'S59',open:3587.530,close:3586.480,amount:1.59,profit:1.46},
+  {time:'2026-04-29 22:57',asset:'EUR/CHF OTC',dir:'put',exp:'S59',open:0.790200,close:0.789450,amount:1.20,profit:0.56},
+  {time:'2026-04-29 23:03',asset:'UAH/USD OTC',dir:'put',exp:'S49',open:0.023417,close:0.023441,amount:1.60,profit:-1.60},
+  {time:'2026-04-29 23:04',asset:'UAH/USD OTC',dir:'put',exp:'S59',open:0.023442,close:0.023461,amount:3.33,profit:-3.33},
+  {time:'2026-04-29 23:05',asset:'UAH/USD OTC',dir:'put',exp:'S59',open:0.023459,close:0.023423,amount:6.96,profit:6.40},
+  {time:'2026-04-29 23:16',asset:'AED/CNY OTC',dir:'call',exp:'S60',open:1.906920,close:1.905640,amount:1.60,profit:-1.60},
+  {time:'2026-04-29 23:18',asset:'AED/CNY OTC',dir:'call',exp:'S53',open:1.905690,close:1.902480,amount:3.34,profit:-3.34},
+  {time:'2026-04-29 23:19',asset:'AED/CNY OTC',dir:'call',exp:'S11',open:1.901690,close:1.900230,amount:6.98,profit:-6.98},
+  {time:'2026-04-29 23:21',asset:'AED/CNY OTC',dir:'put',exp:'S57',open:1.900520,close:1.900630,amount:14.56,profit:-14.56},
+  {time:'2026-04-29 23:22',asset:'AED/CNY OTC',dir:'put',exp:'S39',open:1.901190,close:1.900560,amount:31.00,profit:28.52},
+  {time:'2026-04-29 23:25',asset:'AUD/JPY OTC',dir:'call',exp:'S58',open:104.426,close:104.452,amount:1.29,profit:1.11},
+  {time:'2026-04-29 23:31',asset:'USD/MXN OTC',dir:'call',exp:'S59',open:17.2968,close:17.3042,amount:1.50,profit:1.35},
+  {time:'2026-04-29 23:37',asset:'ZAR/USD OTC',dir:'put',exp:'S59',open:0.060200,close:0.060210,amount:1.74,profit:-1.74},
+  {time:'2026-04-29 23:38',asset:'ZAR/USD OTC',dir:'put',exp:'S58',open:0.060210,close:0.060221,amount:4.13,profit:-4.13},
+  {time:'2026-04-29 23:39',asset:'ZAR/USD OTC',dir:'put',exp:'S59',open:0.060227,close:0.060295,amount:4.13,profit:-4.13},
+  {time:'2026-04-29 23:39',asset:'ZAR/USD OTC',dir:'put',exp:'S43',open:0.060224,close:0.060295,amount:4.13,profit:-4.13},
+  {time:'2026-04-29 23:42',asset:'NGN/USD OTC',dir:'put',exp:'S49',open:0.000764,close:0.000763,amount:23.22,profit:21.36},
+  {time:'2026-04-29 23:50',asset:'TND/USD OTC',dir:'call',exp:'S60',open:0.382270,close:0.382270,amount:1.64,profit:0.00},
+  {time:'2026-04-30 18:59',asset:'AED/CNY OTC',dir:'put',exp:'S59',open:1.812150,close:1.810860,amount:22.23,profit:15.78},
+  {time:'2026-05-01 03:50',asset:'MAD/USD OTC',dir:'call',exp:'S59',open:0.144870,close:0.145620,amount:7.41,profit:6.82},
+  {time:'2026-05-01 22:37',asset:'USD/JPY OTC',dir:'put',exp:'S53',open:157.486,close:157.482,amount:32.27,profit:28.40},
+  {time:'2026-05-02 07:13',asset:'AUD/NZD OTC',dir:'call',exp:'S59',open:1.350100,close:1.347910,amount:27.00,profit:-27.00},
+  {time:'2026-05-02 07:13',asset:'AUD/NZD OTC',dir:'call',exp:'S60',open:1.347860,close:1.347660,amount:63.00,profit:-63.00},
+  {time:'2026-05-02 07:15',asset:'AUD/NZD OTC',dir:'call',exp:'S44',open:1.347570,close:1.347960,amount:149.00,profit:105.79},
+  {time:'2026-05-02 07:27',asset:'EUR/GBP OTC',dir:'put',exp:'S59',open:0.910170,close:0.910790,amount:8.00,profit:-8.00},
+  {time:'2026-05-02 07:28',asset:'EUR/GBP OTC',dir:'put',exp:'S55',open:0.910730,close:0.911110,amount:16.87,profit:-16.87},
+  {time:'2026-05-02 07:29',asset:'EUR/GBP OTC',dir:'put',exp:'S59',open:0.911070,close:0.910820,amount:35.00,profit:32.20},
+  {time:'2026-05-03 16:11',asset:'USD/DZD OTC',dir:'call',exp:'S59',open:135.333,close:135.257,amount:32.00,profit:-32.00},
+  {time:'2026-05-03 16:12',asset:'USD/DZD OTC',dir:'call',exp:'S59',open:135.246,close:135.215,amount:70.00,profit:-70.00},
+  {time:'2026-05-03 16:13',asset:'USD/DZD OTC',dir:'call',exp:'S59',open:135.198,close:135.153,amount:158.00,profit:-158.00},
+  {time:'2026-05-03 16:14',asset:'USD/DZD OTC',dir:'call',exp:'S58',open:135.156,close:135.223,amount:316.00,profit:271.76},
+  {time:'2026-05-03 16:20',asset:'USD/CAD OTC',dir:'call',exp:'S58',open:1.390960,close:1.390320,amount:14.00,profit:-14.00},
+  {time:'2026-05-03 16:20',asset:'USD/CAD OTC',dir:'call',exp:'S31',open:1.390620,close:1.390320,amount:31.00,profit:-31.00},
+  {time:'2026-05-03 16:21',asset:'USD/CAD OTC',dir:'call',exp:'S52',open:1.390520,close:1.390590,amount:62.00,profit:57.04},
+];
+
+let balance = 520;
+const balanceData = trades.map(t => {
+  balance += t.profit;
+  return parseFloat(balance.toFixed(2));
+});
+const balanceLabels = trades.map((t,i) => `T${i+1}`);
+
+// Pair aggregation
+const pairMap = {};
+trades.forEach(t => {
+  const k = t.asset.replace(' OTC','');
+  if(!pairMap[k]) pairMap[k] = {profit:0,count:0,volume:0,wins:0};
+  pairMap[k].profit += t.profit;
+  pairMap[k].count++;
+  pairMap[k].volume += t.amount;
+  if(t.profit > 0) pairMap[k].wins++;
+});
+const pairs = Object.entries(pairMap).sort((a,b)=>b[1].profit-a[1].profit);
+
+// Populate pair table
+const ptb = document.getElementById('pairTableBody');
+pairs.forEach(([name,d],i) => {
+  const wr = d.count > 0 ? Math.round(d.wins/d.count*100) : 0;
+  const pclass = d.profit >= 0 ? 'profit-pos' : 'profit-neg';
+  const pillClass = d.profit >= 0 ? 'pill-green' : 'pill-red';
+  let rankBadge = '';
+  if(i===0) rankBadge='<span class="rank-badge rank-1">1</span>';
+  else if(i===1) rankBadge='<span class="rank-badge rank-2">2</span>';
+  else if(i===2) rankBadge='<span class="rank-badge rank-3">3</span>';
+  else rankBadge=`<span style="font-size:11px;color:var(--txt3);">${i+1}</span>`;
+  ptb.innerHTML+=`<tr>
+    <td>${rankBadge}</td>
+    <td style="font-weight:700;">${name}</td>
+    <td>${d.count}</td>
+    <td class="${pclass}">${d.profit>=0?'+':''}$${d.profit.toFixed(2)}</td>
+    <td class="${pclass}">${(d.profit/d.count)>=0?'+':''}$${(d.profit/d.count).toFixed(2)}</td>
+    <td>$${d.volume.toFixed(2)}</td>
+    <td><span class="pill ${pillClass}">${wr}% WR</span></td>
+  </tr>`;
+});
+
+// Populate trade table
+const ttb = document.getElementById('tradeTableBody');
+let bal2 = 520;
+trades.forEach((t,i) => {
+  bal2 += t.profit;
+  const pc = t.profit > 0 ? 'profit-pos' : t.profit < 0 ? 'profit-neg' : 'profit-zero';
+  const dc = t.dir==='call' ? 'dir-call' : 'dir-put';
+  ttb.innerHTML+=`<tr>
+    <td style="color:var(--txt3);">${i+1}</td>
+    <td>${t.time}</td>
+    <td style="font-weight:700;">${t.asset.replace(' OTC','')}</td>
+    <td><span class="dir-badge ${dc}">${t.dir.toUpperCase()}</span></td>
+    <td>${t.exp}</td>
+    <td style="font-size:10px;">${t.open}</td>
+    <td style="font-size:10px;">${t.close}</td>
+    <td>$${t.amount.toFixed(2)}</td>
+    <td class="${pc}">${t.profit>=0?'+':''}$${t.profit.toFixed(2)}</td>
+    <td style="font-weight:700;">$${bal2.toFixed(2)}</td>
+  </tr>`;
+});
+
+// Charts after DOM is ready
+window.addEventListener('load', () => {
+
+// Balance curve
+new Chart(document.getElementById('balanceChart'),{
+  type:'line',
+  data:{
+    labels:balanceLabels,
+    datasets:[{
+      label:'Balance ($)',
+      data:balanceData,
+      borderColor:'#10b981',
+      backgroundColor:'rgba(16,185,129,0.08)',
+      pointRadius:2,
+      pointHoverRadius:4,
+      tension:0.3,
+      fill:true,
+      borderWidth:2
+    },{
+      label:'Starting ($520)',
+      data:Array(trades.length).fill(520),
+      borderColor:'#9ca3af',
+      borderDash:[6,4],
+      borderWidth:1.5,
+      pointRadius:0,
+      fill:false
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`$${ctx.parsed.y.toFixed(2)}`}}},
+    scales:{
+      x:{ticks:{display:false},grid:{display:false}},
+      y:{ticks:{callback:v=>`$${v}`,font:{family:'JetBrains Mono',size:11}},grid:{color:'#f3f4f6'}}
+    }
+  }
+});
+
+// Daily P&L
+const days=['Apr 29','Apr 30','May 1','May 2','May 3'];
+const dailyPnl=[20.54,15.78,35.22,23.12,23.80];
+new Chart(document.getElementById('dailyChart'),{
+  type:'bar',
+  data:{labels:days,datasets:[{label:'P&L',data:dailyPnl,backgroundColor:dailyPnl.map(v=>v>=0?'#10b981':'#ef4444'),borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`+$${ctx.parsed.y.toFixed(2)}`}}},
+    scales:{x:{ticks:{font:{family:'JetBrains Mono',size:11}}},y:{ticks:{callback:v=>`$${v}`,font:{family:'JetBrains Mono',size:11}},grid:{color:'#f3f4f6'}}}}
+});
+
+// Win/Loss Donut
+new Chart(document.getElementById('winlossChart'),{
+  type:'doughnut',
+  data:{labels:['Wins','Losses','Ties'],datasets:[{data:[18,20,2],backgroundColor:['#10b981','#ef4444','#9ca3af'],borderWidth:0,hoverOffset:4}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} trades`}}}}
+});
+
+// Direction donut
+new Chart(document.getElementById('dirChart'),{
+  type:'doughnut',
+  data:{labels:['Call','Put'],datasets:[{data:[22,18],backgroundColor:['#3b82f6','#8b5cf6'],borderWidth:0,hoverOffset:4}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false}}}
+});
+
+// Direction P&L
+const calls=trades.filter(t=>t.dir==='call').reduce((a,b)=>a+b.profit,0);
+const puts=trades.filter(t=>t.dir==='put').reduce((a,b)=>a+b.profit,0);
+new Chart(document.getElementById('dirPnlChart'),{
+  type:'bar',
+  data:{labels:['Call','Put'],datasets:[{data:[parseFloat(calls.toFixed(2)),parseFloat(puts.toFixed(2))],backgroundColor:['#3b82f6','#8b5cf6'],borderRadius:8}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y>=0?'+':''}$${ctx.parsed.y.toFixed(2)}`}}},
+    scales:{x:{ticks:{font:{family:'JetBrains Mono',size:12}}},y:{ticks:{callback:v=>`$${v}`,font:{family:'JetBrains Mono',size:11}},grid:{color:'#f3f4f6'}}}}
+});
+
+// Pairs horizontal bar
+const pairNames=pairs.map(p=>p[0].replace(' OTC',''));
+const pairProfits=pairs.map(p=>parseFloat(p[1].profit.toFixed(2)));
+const pairColors=pairProfits.map(v=>v>=0?'#10b981':'#ef4444');
+new Chart(document.getElementById('pairChart'),{
+  type:'bar',
+  data:{labels:pairNames,datasets:[{label:'P&L',data:pairProfits,backgroundColor:pairColors,borderRadius:4}]},
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.x>=0?'+':''}$${ctx.parsed.x.toFixed(2)}`}}},
+    scales:{
+      x:{ticks:{callback:v=>`$${v}`,font:{family:'JetBrains Mono',size:11}},grid:{color:'#f3f4f6'}},
+      y:{ticks:{font:{family:'JetBrains Mono',size:11}}}
+    }
+  }
+});
+
+});
+
+function switchTab(id, btn){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='projection') initProjection();
+}
+
+// ── PROJECTION ENGINE ──────────────────────────────────────────────────────────
+let projChartInstance = null;
+let projInitialized = false;
+
+function projFormula(hoursElapsed) {
+  // =143*(1.0013^(6901-(DATE(2027,1,1)-TODAY())*24))
+  // hoursElapsed = hours since formula origin (6901 hours before Jan 1 2027)
+  return 143 * Math.pow(1.0013, hoursElapsed);
+}
+
+function hoursUntilJan2027() {
+  const now = new Date();
+  const target = new Date('2027-01-01T00:00:00');
+  return (target - now) / 3600000; // ms → hours
+}
+
+function currentProjectedBalance() {
+  const hLeft = hoursUntilJan2027();
+  const elapsed = 6901 - hLeft;
+  return projFormula(elapsed);
+}
+
+function fmt(n) {
+  if(n >= 1e6) return '$' + (n/1e6).toFixed(3) + 'M';
+  if(n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(2);
+}
+function fmtFull(n) {
+  return '$' + Math.round(n).toLocaleString();
+}
+
+function updateCountdown() {
+  const now = new Date();
+  const target = new Date('2027-01-01T00:00:00');
+  const diff = target - now;
+  if(diff <= 0) return;
+  const days = Math.floor(diff/86400000);
+  const hrs  = Math.floor((diff%86400000)/3600000);
+  const mins = Math.floor((diff%3600000)/60000);
+  const secs = Math.floor((diff%60000)/1000);
+  document.getElementById('cdDays').textContent = days;
+  document.getElementById('cdHours').textContent = String(hrs).padStart(2,'0');
+  document.getElementById('cdMins').textContent  = String(mins).padStart(2,'0');
+  document.getElementById('cdSecs').textContent  = String(secs).padStart(2,'0');
+
+  const hLeft = hoursUntilJan2027();
+  document.getElementById('statHoursLeft').textContent = Math.round(hLeft).toLocaleString() + 'h';
+
+  const bal = currentProjectedBalance();
+  document.getElementById('projCurrentVal').textContent = fmtFull(bal);
+  document.getElementById('projCurrentSub').textContent =
+    `Formula balance as of right now · ${fmt(1000000 - bal)} left to $1M`;
+
+  const growthNeeded = ((1000000 - bal)/bal*100).toFixed(1);
+  document.getElementById('statGrowthNeeded').textContent = growthNeeded + 'x';
+
+  // Pace indicator
+  const pace = document.getElementById('paceIndicator');
+  const onTrack = bal >= projFormula(6901 - hLeft - 0.001);
+  pace.innerHTML = `
+    <div class="pace-dot" style="background:${onTrack?'#10b981':'#f59e0b'};box-shadow:0 0 8px ${onTrack?'#10b981':'#f59e0b'};"></div>
+    <div class="pace-txt">Formula says you should be at <b>${fmtFull(bal)}</b> right now at 0.13%/hr compounding → Target: <b>$1,000,000</b> on Jan 1, 2027</div>`;
+}
+
+function buildMilestones() {
+  const milestones = [
+    {amt:1000,icon:'🌱',label:'$1K'},
+    {amt:5000,icon:'🔥',label:'$5K'},
+    {amt:10000,icon:'💎',label:'$10K'},
+    {amt:50000,icon:'🚀',label:'$50K'},
+    {amt:100000,icon:'🏆',label:'$100K'},
+    {amt:250000,icon:'⚡',label:'$250K'},
+    {amt:500000,icon:'🌟',label:'$500K'},
+    {amt:1000000,icon:'🎯',label:'$1M'},
+  ];
+  const grid = document.getElementById('milestoneGrid');
+  grid.innerHTML = '';
+  const now = new Date();
+
+  milestones.forEach(m => {
+    // Find when formula hits this amount: m.amt = 143*(1.0013^x) → x = log(m.amt/143)/log(1.0013)
+    const x = Math.log(m.amt/143)/Math.log(1.0013); // hours elapsed from origin
+    // hours from now: elapsed = 6901 - hoursLeft, so hoursLeft = 6901 - x
+    const hLeft = 6901 - x;
+    const msLeft = hLeft * 3600000;
+    const hitDate = new Date(new Date('2027-01-01T00:00:00') - msLeft);
+
+    const alreadyHit = hitDate <= now;
+    const dateStr = alreadyHit
+      ? 'Already passed ✓'
+      : hitDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) +
+        ' ~' + hitDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+    const curBal = currentProjectedBalance();
+    const pct = Math.min(100, (curBal/m.amt)*100).toFixed(0);
+
+    grid.innerHTML += `
+      <div class="milestone-card">
+        <div class="milestone-icon">${m.icon}</div>
+        <div class="milestone-body" style="flex:1;">
+          <div class="milestone-amt ${alreadyHit?'reached':''}">${m.label}</div>
+          <div class="milestone-date">${dateStr}</div>
+          <div class="milestone-bar-wrap">
+            <div class="milestone-bar" style="width:${pct}%;background:${alreadyHit?'#10b981':'#3b82f6'};"></div>
+          </div>
+          <div style="font-family:'JetBrains Mono';font-size:10px;color:#9ca3af;margin-top:3px;">${pct}% there</div>
+        </div>
+      </div>`;
+  });
+}
+
+function buildProjectionChart() {
+  const ctx = document.getElementById('projectionChart');
+  const now = new Date();
+  const target = new Date('2027-01-01T00:00:00');
+  const totalHours = (target - now) / 3600000;
+  const steps = 120;
+  const labels = [], data = [], nowMarker = [];
+
+  for(let i=0; i<=steps; i++){
+    const frac = i/steps;
+    const hoursFromNow = frac * totalHours;
+    // total elapsed from origin
+    const elapsed = 6901 - (totalHours - hoursFromNow);
+    const bal = projFormula(elapsed);
+    const d = new Date(now.getTime() + hoursFromNow*3600000);
+    labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    data.push(parseFloat(bal.toFixed(2)));
+    nowMarker.push(i===0 ? parseFloat(bal.toFixed(2)) : null);
+  }
+
+  if(projChartInstance) { projChartInstance.destroy(); }
+  projChartInstance = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Projected Balance',
+          data,
+          borderColor:'#10b981',
+          backgroundColor:'rgba(16,185,129,0.07)',
+          fill:true,
+          tension:0.4,
+          pointRadius:0,
+          pointHoverRadius:5,
+          borderWidth:2.5,
+        },
+        {
+          label:'$1M Target',
+          data:Array(steps+1).fill(1000000),
+          borderColor:'#f59e0b',
+          borderDash:[8,4],
+          borderWidth:1.5,
+          pointRadius:0,
+          fill:false,
+        },
+        {
+          label:'Current Balance ($638)',
+          data:Array(steps+1).fill(638.46),
+          borderColor:'#3b82f6',
+          borderDash:[4,4],
+          borderWidth:1.5,
+          pointRadius:0,
+          fill:false,
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{family:'JetBrains Mono',size:11},color:'#374151',boxWidth:14}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}`}}
+      },
+      scales:{
+        x:{
+          ticks:{
+            maxTicksLimit:8,
+            font:{family:'JetBrains Mono',size:10},
+            color:'#9ca3af',
+            maxRotation:0
+          },
+          grid:{color:'#f3f4f6'}
+        },
+        y:{
+          type:'logarithmic',
+          ticks:{
+            callback:v=>{
+              if(v>=1e6) return '$1M';
+              if(v>=1e5) return '$'+Math.round(v/1000)+'K';
+              if(v>=1e3) return '$'+Math.round(v/1000)+'K';
+              return '$'+Math.round(v);
+            },
+            font:{family:'JetBrains Mono',size:10},
+            color:'#9ca3af'
+          },
+          grid:{color:'#f3f4f6'}
+        }
+      }
+    }
+  });
+}
+
+function initProjection() {
+  if(projInitialized) return;
+  projInitialized = true;
+  updateCountdown();
+  buildMilestones();
+  buildProjectionChart();
+  setInterval(updateCountdown, 1000);
+}
+
+// Auto-init projection on page load so it works when opening the downloaded file directly
+window.addEventListener('load', () => {
+  // Small delay so Chart.js is ready
+  setTimeout(initProjection, 200);
+});
+</script>
+</body>
+</html>
